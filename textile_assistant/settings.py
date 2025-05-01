@@ -26,6 +26,11 @@ SECRET_KEY = 'django-insecure-_!6xfvrh!0wecf_4=lxw)w=^x2)vb*0puhm+v&y^lfu$sl0v8z
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
 
 
 
@@ -124,3 +129,38 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Custom user model
+AUTH_USER_MODEL = 'processes.CustomUser'
+
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 10,  # Recommended minimum length
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Session security settings
+SESSION_COOKIE_SECURE = True  # For HTTPS sites
+SESSION_COOKIE_HTTPONLY = True  # Prevents JavaScript from accessing the cookie
+SESSION_COOKIE_SAMESITE = 'Lax'  # Prevents CSRF attacks
+CSRF_COOKIE_SECURE = True  # For HTTPS sites
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# For production, consider enabling HSTS
+# SECURE_HSTS_SECONDS = 31536000  # 1 year
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_HSTS_PRELOAD = True
