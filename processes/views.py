@@ -8,6 +8,7 @@ import requests
 import re
 import json
 import concurrent.futures
+from .test import locationfinder
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -281,3 +282,92 @@ def logout_view(request):
         logout(request)
         return JsonResponse({'message': 'Successfully logged out'}, status=200)
     return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
+
+  # assuming locationfinder is your function
+
+def analyze_view(request):
+    industry = request.GET.get("industry")
+    investment = request.GET.get("investment")
+    state = request.GET.get("state", None)  # Optional parameter
+
+    # Validate required parameters
+    if not industry or not investment:
+        return JsonResponse({
+            "error": "Missing required parameters: both 'industry' and 'investment' are required."
+        }, status=400)
+
+    # Ensure valid industry and investment scale values
+    valid_industries = ["textile", "electronics", "food processing", "automotive", "pharmaceutical", "chemical", "furniture", "plastics", "paper", "metal"]
+    valid_investment_scales = ["small", "medium", "large"]
+
+    if industry not in valid_industries:
+        return JsonResponse({
+            "error": f"Invalid industry type. Valid options are: {', '.join(valid_industries)}."
+        }, status=400)
+    
+    if investment not in valid_investment_scales:
+        return JsonResponse({
+            "error": f"Invalid investment scale. Valid options are: {', '.join(valid_investment_scales)}."
+        }, status=400)
+
+    try:
+        # Call your locationfinder function
+        result = locationfinder(industry, investment, state)
+        
+        import json
+        import re
+        
+        # Check if result is already a dictionary
+        if isinstance(result, dict):
+            # Special handling for the 'results' field containing JSON as a string
+            if 'results' in result and isinstance(result['results'], str):
+                # Extract JSON content from triple backticks if present
+                json_pattern = r'```json\n(.*?)\n```'
+                json_match = re.search(json_pattern, result['results'], re.DOTALL)
+                
+                if json_match:
+                    # Replace the string with parsed JSON object
+                    try:
+                        parsed_json = json.loads(json_match.group(1))
+                        result['results'] = parsed_json
+                    except json.JSONDecodeError:
+                        # If parsing fails, keep as string
+                        pass
+            
+            response_data = result
+        else:
+            # If result is a string, try to parse it as JSON
+            try:
+                # Check if it's a string containing JSON with backticks
+                json_pattern = r'```json\n(.*?)\n```'
+                json_match = re.search(json_pattern, result, re.DOTALL)
+                
+                if json_match:
+                    response_data = json.loads(json_match.group(1))
+                else:
+                    response_data = json.loads(result)
+            except (json.JSONDecodeError, TypeError):
+                # If JSON parsing fails, return raw result with appropriate content type
+                from django.http import HttpResponse
+                return HttpResponse(result, content_type="application/json")
+        
+        # Return the result with formatted JSON (indentation for readability)
+        response = JsonResponse(response_data, safe=False, json_dumps_params={"ensure_ascii": False, "indent": 2})
+        
+        # Ensure proper content type
+        response["Content-Type"] = "application/json; charset=utf-8"
+        
+        return response
+
+    except KeyError as e:
+        # Specific error handling if a required key is missing in the result
+        return JsonResponse({"error": f"Missing key: {str(e)}"}, status=500)
+
+    except Exception as e:
+        # General error handling
+        import traceback
+        error_traceback = traceback.format_exc()
+        return JsonResponse({
+            "error": f"An unexpected error occurred: {str(e)}",
+            "traceback": error_traceback
+        }, status=500)
